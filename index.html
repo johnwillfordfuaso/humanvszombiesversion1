@@ -1,0 +1,2230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human vs Zombies: Last Stand</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap');
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #111;
+            font-family: 'Orbitron', 'Arial', sans-serif;
+            color: #fff;
+        }
+        
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255,0,0,0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(255,0,0,0.1) 0%, transparent 20%);
+            box-shadow: 
+                0 0 30px rgba(255, 50, 50, 0.5),
+                0 0 60px rgba(255, 0, 0, 0.2),
+                inset 0 0 20px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+        }
+        
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            background-image: 
+                linear-gradient(rgba(20, 20, 20, 0.8) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(20, 20, 20, 0.8) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 5;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+        }
+        
+        .ui-panel {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ui-icon {
+            width: 24px;
+            height: 24px;
+            filter: drop-shadow(0 0 3px rgba(255, 0, 0, 0.7));
+        }
+        
+        .ui-value {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
+            font-size: 18px;
+        }
+        
+        .health-bar-container {
+            width: 120px;
+            height: 20px;
+            background-color: rgba(50, 0, 0, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .health-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #4CAF50, #2E7D32);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.9) 0%, rgba(50,0,0,0.8) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+        
+        #game-over-screen {
+            display: none;
+        }
+        
+        h1 {
+            color: #ff3333;
+            text-shadow: 
+                0 0 10px rgba(255, 0, 0, 0.8),
+                0 0 20px rgba(255, 0, 0, 0.5),
+                0 0 30px rgba(255, 0, 0, 0.3);
+            font-size: 64px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-family: 'Press Start 2P', cursive;
+            letter-spacing: 3px;
+            animation: pulse 2s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { text-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
+            to { text-shadow: 0 0 20px rgba(255, 0, 0, 0.8), 0 0 30px rgba(255, 0, 0, 0.6); }
+        }
+        
+        .subtitle {
+            color: #ccc;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 24px;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            letter-spacing: 1px;
+        }
+        
+        button {
+            background: linear-gradient(to bottom, #ff3333, #cc0000);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            pointer-events: auto;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 
+                0 5px 15px rgba(0, 0, 0, 0.5),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button:hover {
+            background: linear-gradient(to bottom, #ff4444, #dd0000);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(255, 0, 0, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .reload-message {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(200, 0, 0, 0.8);
+            padding: 12px 20px;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 5;
+        }
+        
+        .instructions {
+            margin-top: 30px;
+            text-align: center;
+            color: #aaa;
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 80%;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 50, 50, 0.3);
+        }
+        
+        .instructions span {
+            color: #ff5a5a;
+            font-weight: bold;
+        }
+        
+        .blood-splatter {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 4;
+            opacity: 0;
+            transition: opacity 0.5s;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M30,50 Q40,30 50,50 T70,50" fill="none" stroke="rgba(150,0,0,0.3)" stroke-width="5"/></svg>');
+            background-size: 200px 200px;
+            background-repeat: no-repeat;
+        }
+        
+        .damage-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            background-color: rgba(255, 0, 0, 0.3);
+            transition: opacity 0.3s;
+        }
+
+        .vignette {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 6;
+            opacity: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(180,0,0,0.55) 100%);
+            transition: opacity 0.4s;
+            animation: vignettePulse 1.2s infinite;
+        }
+
+        @keyframes vignettePulse {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.25); }
+        }
+        
+        /* Animation for when player is hit */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .shake {
+            animation: shake 0.5s;
+        }
+        
+        /* Boss health bar */
+        .boss-health-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 30px;
+            background-color: rgba(50, 0, 0, 0.7);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 0, 0, 0.5);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 0, 0, 0.5);
+            z-index: 5;
+            display: none;
+        }
+        
+        .boss-health-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #ff0000, #990000);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+        
+        .boss-name {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #ff0000;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+            font-size: 18px;
+        }
+
+        /* Performance stats */
+        #performance-stats {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            z-index: 5;
+            pointer-events: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
+        }
+
+        #performance-stats div {
+            margin: 5px 0;
+        }
+
+        .stat-label {
+            color: #ff5a5a;
+            display: inline-block;
+            width: 120px;
+        }
+
+        /* Weapon info panel */
+        .weapon-info {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            z-index: 5;
+            pointer-events: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
+        }
+
+        .weapon-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff5a5a;
+            margin-bottom: 5px;
+        }
+
+        /* Combo / killstreak popup */
+        #combo-display {
+            position: absolute;
+            top: 130px;
+            left: 50%;
+            transform: translateX(-50%) scale(1);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 22px;
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 200, 0, 0.9), 0 0 20px rgba(255, 100, 0, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 6;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        #combo-display.show {
+            opacity: 1;
+            transform: translateX(-50%) scale(1.15);
+        }
+
+        /* Level up / wave banner */
+        #wave-banner {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.6);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 28px;
+            color: #ff3333;
+            text-shadow: 0 0 15px rgba(255,0,0,0.9), 0 0 30px rgba(255,0,0,0.5);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 7;
+            transition: opacity 0.3s, transform 0.3s;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #wave-banner.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Crate glow effect */
+        @keyframes crateGlow {
+            0% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.7); }
+            100% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="blood-splatter" id="blood-splatter"></div>
+        <div class="damage-effect" id="damage-effect"></div>
+        <div class="vignette" id="vignette"></div>
+        
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-container">
+            <div class="ui-panel">
+                <svg class="ui-icon" viewBox="0 0 24 24">
+                    <path fill="#ff3333" d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,10.5A1.5,1.5 0 0,1 13.5,12A1.5,1.5 0 0,1 12,13.5A1.5,1.5 0 0,1 10.5,12A1.5,1.5 0 0,1 12,10.5M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5A1.5,1.5 0 0,1 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5Z" />
+                </svg>
+                <span class="ui-value" id="score">0</span>
+            </div>
+            
+            <div class="ui-panel">
+                <svg class="ui-icon" viewBox="0 0 24 24">
+                    <path fill="#4CAF50" d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,10.5A1.5,1.5 0 0,1 13.5,12A1.5,1.5 0 0,1 12,13.5A1.5,1.5 0 0,1 10.5,12A1.5,1.5 0 0,1 12,10.5M7.5,10.5A1.5,1.5 0 0,1 9,12A1.5,1.5 0 0,1 7.5,13.5A1.5,1.5 0 0,1 6,12A1.5,1.5 0 0,1 7.5,10.5M16.5,10.5A1.5,1.5 0 0,1 18,12A1.5,1.5 0 0,1 16.5,13.5A1.5,1.5 0 0,1 15,12A1.5,1.5 0 0,1 16.5,10.5Z" />
+                </svg>
+                <div class="health-bar-container">
+                    <div class="health-bar" id="health-fill"></div>
+                </div>
+            </div>
+            
+            <div class="ui-panel">
+                <svg class="ui-icon" viewBox="0 0 24 24">
+                    <path fill="#ff3333" d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z" />
+                </svg>
+                <span class="ui-value" id="ammo">10</span>
+                <span class="ui-value">/</span>
+                <span class="ui-value" id="max-ammo">10</span>
+            </div>
+        </div>
+        
+        <div class="weapon-info" id="weapon-info">
+            <div class="weapon-name" id="weapon-name">PISTOL</div>
+            <div><span class="stat-label">Damage:</span> <span id="weapon-damage">50</span></div>
+            <div><span class="stat-label">Fire Rate:</span> <span id="weapon-rate">Medium</span></div>
+            <div><span class="stat-label">Ammo:</span> <span id="weapon-ammo">10/10</span></div>
+        </div>
+
+        <div id="combo-display">COMBO x0</div>
+        <div id="wave-banner">WAVE</div>
+        
+        <div class="boss-health-container" id="boss-health-container">
+            <div class="boss-health-fill" id="boss-health-fill"></div>
+            <div class="boss-name">BOSS ZOMBIE</div>
+        </div>
+        
+        <div class="reload-message" id="reload-message">Press R to reload!</div>
+        
+        <!-- Performance stats display -->
+        <div id="performance-stats">
+            <div><span class="stat-label">Accuracy:</span> <span id="accuracy-stat">0%</span></div>
+            <div><span class="stat-label">K/D Ratio:</span> <span id="kd-ratio">0.00</span></div>
+            <div><span class="stat-label">Ammo Efficiency:</span> <span id="ammo-efficiency">0%</span></div>
+            <div><span class="stat-label">Shots Fired:</span> <span id="shots-fired">0</span></div>
+            <div><span class="stat-label">Zombies Killed:</span> <span id="zombies-killed">0</span></div>
+        </div>
+        
+        <div id="start-screen">
+            <h1>HUMAN VS ZOMBIES</h1>
+            <div class="subtitle">LAST STAND</div>
+            <button id="start-button">START GAME</button>
+            <div class="instructions">
+                <span>CONTROLS:</span><br>
+                WASD or Arrow Keys to move<br>
+                Mouse to aim | Left click to shoot<br>
+                R to reload | Survive as long as you can<br>
+                Walk over crates to get new weapons
+            </div>
+        </div>
+        
+        <div id="game-over-screen">
+            <h1>GAME OVER</h1>
+            <div class="subtitle">FINAL SCORE: <span id="final-score">0</span></div>
+            <div class="performance-summary">
+                <div><span class="stat-label">Accuracy:</span> <span id="final-accuracy">0%</span></div>
+                <div><span class="stat-label">K/D Ratio:</span> <span id="final-kd">0.00</span></div>
+                <div><span class="stat-label">Ammo Efficiency:</span> <span id="final-efficiency">0%</span></div>
+            </div>
+            <button id="restart-button">FIGHT AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const PLAYER_SPEED = 4;
+        let ZOMBIE_SPEED = 2.5;
+        let BOSS_SPEED = 2.0;
+        const BULLET_SPEED = 10;
+        const RELOAD_TIME = 1500; // in milliseconds
+        const SPAWN_INTERVAL_MIN = 1000; // minimum time between zombie spawns in milliseconds
+        const SPAWN_INTERVAL_MAX = 3000; // maximum time between zombie spawns in milliseconds
+        const SPAWN_DECREASE_FACTOR = 0.95; // how much spawn interval decreases over time
+        const SPAWN_MINIMUM = 200; // minimum spawn interval won't go below this
+        const DIFFICULTY_INCREASE_INTERVAL = 5000; // increase difficulty every 10 seconds
+        const BOSS_SPAWN_INTERVAL = 30000; // spawn boss every 30 seconds
+        const BOSS_HEALTH = 500;
+        const MAX_ZOMBIES = 50; // Added to prevent performance issues
+        const CRATE_SPAWN_INTERVAL = 20000; // Spawn a crate every 20 seconds
+        const CRATE_DURATION = 10000; // Crate stays for 10 seconds
+        const COMBO_TIMEOUT = 2500; // ms before combo resets
+        
+        // Particle types
+        const PARTICLE_TYPES = {
+            BLOOD: 0,
+            MUZZLE_FLASH: 1,
+            EXPLOSION: 2,
+            SMOKE: 3,
+            SPARK: 4
+        };
+
+        // Game state
+        let gameActive = false; 
+        let particles = [];
+        let floatingTexts = [];
+        let bloodPools = [];
+        let dustMotes = [];
+        let score = 0;
+        let combo = 0;
+        let comboTimer = 0;
+        let wave = 0;
+        let player = {
+            x: 400,
+            y: 300,
+            width: 30,
+            height: 40,
+            health: 100,
+            ammo: 10,
+            maxAmmo: 10,
+            isReloading: false,
+            reloadTimer: null,
+            moveDirection: { x: 0, y: 0 },
+            legPosition: 0, // For walking animation
+            isMoving: false,
+            lastDirection: { x: 1, y: 0 }, // Track last movement direction for idle animation
+            currentWeapon: 'pistol',
+            
+            weapons: {  // <-- Directly define weapons here
+                pistol: {
+                    name: "PISTOL",
+                    damage: 50,
+                    fireRate: "Medium",
+                    maxAmmo: 10,
+                    reloadTime: 1500,
+                    bulletSpeed: 10,
+                    color: '#FF5555',
+                    bulletGlow: '#FF0000'
+                },
+                shotgun: {
+                    name: "SHOTGUN",
+                    damage: 30,
+                    fireRate: "Slow",
+                    maxAmmo: 6,
+                    reloadTime: 2000,
+                    bulletSpeed: 8,
+                    color: '#FFAA00',
+                    spread: 15,  // Added spread angle in degrees
+                    pelletCount: 5,  // Added pellet count
+                    bulletGlow: '#FF7700'
+                },
+                smg: {
+                    name: "SMG",
+                    damage: 25,
+                    fireRate: "Fast",
+                    maxAmmo: 30,
+                    reloadTime: 1800,
+                    bulletSpeed: 12,
+                    color: '#55AAFF',
+                    bulletGlow: '#0088FF'
+                },
+                rifle: {
+                    name: "RIFLE",
+                    damage: 75,
+                    fireRate: "Medium",
+                    maxAmmo: 15,
+                    reloadTime: 1700,
+                    bulletSpeed: 15,
+                    color: '#55FF55',
+                    bulletGlow: '#00FF00'
+                }
+            }
+        };
+        
+        let zombies = [];
+        let boss = null;
+        let bullets = [];
+        let crates = [];
+        let spawnInterval = SPAWN_INTERVAL_MAX;
+        let spawnTimer = null;
+        let difficultyTimer = null;
+        let bossSpawnTimer = null;
+        let crateSpawnTimer = null;
+        let lastFrameTime = 0;
+        let animationFrameId = null;
+
+        // Screen shake effect
+        let screenShake = {
+            intensity: 0,
+            duration: 0,
+            timer: 0
+        };
+
+        // Performance tracking
+        let stats = {
+            shotsFired: 0,
+            shotsHit: 0,
+            zombiesKilled: 0,
+            deaths: 0,
+            ammoUsed: 0,
+            totalAmmoFired: 0
+        };
+        
+        let lighting = {
+            flicker: 0,
+            pulse: 0
+        };
+
+        // Get canvas and context
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game controls
+        const keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+
+        let mousePosition = { x: 0, y: 0 };
+
+        // UI elements
+        const scoreElement = document.getElementById('score');
+        const healthFill = document.getElementById('health-fill');
+        const ammoElement = document.getElementById('ammo');
+        const maxAmmoElement = document.getElementById('max-ammo');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const finalScoreElement = document.getElementById('final-score');
+        const reloadMessage = document.getElementById('reload-message');
+        const bloodSplatter = document.getElementById('blood-splatter');
+        const damageEffect = document.getElementById('damage-effect');
+        const vignette = document.getElementById('vignette');
+        const gameContainer = document.getElementById('game-container');
+        const bossHealthContainer = document.getElementById('boss-health-container');
+        const bossHealthFill = document.getElementById('boss-health-fill');
+        const weaponInfo = document.getElementById('weapon-info');
+        const weaponName = document.getElementById('weapon-name');
+        const weaponDamage = document.getElementById('weapon-damage');
+        const weaponRate = document.getElementById('weapon-rate');
+        const weaponAmmo = document.getElementById('weapon-ammo');
+        const comboDisplay = document.getElementById('combo-display');
+        const waveBanner = document.getElementById('wave-banner');
+
+        // Performance stats elements
+        const accuracyStat = document.getElementById('accuracy-stat');
+        const kdRatioElement = document.getElementById('kd-ratio');
+        const ammoEfficiencyElement = document.getElementById('ammo-efficiency');
+        const shotsFiredElement = document.getElementById('shots-fired');
+        const zombiesKilledElement = document.getElementById('zombies-killed');
+        const finalAccuracyElement = document.getElementById('final-accuracy');
+        const finalKdElement = document.getElementById('final-kd');
+        const finalEfficiencyElement = document.getElementById('final-efficiency');
+
+        // Handle window resize
+        function handleResize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Center player on resize
+            if (gameActive) {
+                player.x = canvas.width / 2;
+                player.y = canvas.height / 2;
+            }
+        }
+
+        // Initialize canvas size
+        handleResize();
+        window.addEventListener('resize', handleResize);
+
+        // Event listeners
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', restartGame);
+
+        window.addEventListener('keydown', (e) => {
+            if (gameActive) {
+                switch (e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        keys.up = true;
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        keys.down = true;
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        keys.left = true;
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        keys.right = true;
+                        break;
+                    case 'r':
+                    case 'R':
+                        reloadWeapon();
+                        break;
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    keys.up = false;
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    keys.down = false;
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    keys.left = false;
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    keys.right = false;
+                    break;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePosition.x = e.clientX - rect.left;
+            mousePosition.y = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (gameActive && !player.isReloading && player.ammo > 0) {
+                shootBullet();
+            } else if (gameActive && player.ammo === 0) {
+                showReloadMessage();
+            }
+        });
+
+        function createParticles(x, y, type, count, color) {
+            for (let i = 0; i < count; i++) {
+                let particle = {
+                    x: x,
+                    y: y,
+                    size: 2 + Math.random() * 4,
+                    life: 100 + Math.random() * 100,
+                    maxLife: 100 + Math.random() * 100,
+                    color: color || '#ff0000',
+                    type: type,
+                    speed: 1 + Math.random() * 3,
+                    angle: Math.random() * Math.PI * 2,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.2
+                };
+
+                // Special behaviors for different particle types
+                switch (type) {
+                    case PARTICLE_TYPES.BLOOD:
+                        particle.size = 3 + Math.random() * 5;
+                        particle.speed = 1 + Math.random() * 5;
+                        particle.life = 50 + Math.random() * 100;
+                        particle.maxLife = particle.life;
+                        break;
+                    case PARTICLE_TYPES.MUZZLE_FLASH:
+                        particle.size = 5 + Math.random() * 10;
+                        particle.life = 10 + Math.random() * 20;
+                        particle.maxLife = particle.life;
+                        particle.speed = 0;
+                        break;
+                    case PARTICLE_TYPES.EXPLOSION:
+                        particle.size = 2 + Math.random() * 8;
+                        particle.speed = 0.5 + Math.random() * 6;
+                        particle.life = 30 + Math.random() * 70;
+                        particle.maxLife = particle.life;
+                        break;
+                }
+
+                particles.push(particle);
+            }
+        }
+
+        // ---- New: floating damage / score text ----
+        function createFloatingText(x, y, text, color, size) {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color || '#fff',
+                size: size || 16,
+                life: 60,
+                maxLife: 60,
+                vy: -1.2
+            });
+        }
+
+        function updateFloatingTexts() {
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const t = floatingTexts[i];
+                t.y += t.vy;
+                t.life--;
+                if (t.life <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        function drawFloatingTexts() {
+            floatingTexts.forEach(t => {
+                const alpha = t.life / t.maxLife;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.font = `bold ${t.size}px Orbitron, sans-serif`;
+                ctx.fillStyle = t.color;
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(t.text, t.x, t.y);
+                ctx.restore();
+            });
+        }
+
+        // ---- New: persistent blood pool decals ----
+        function createBloodPool(x, y, size) {
+            if (bloodPools.length > 80) bloodPools.shift();
+            bloodPools.push({
+                x: x,
+                y: y,
+                size: size || (10 + Math.random() * 15),
+                rotation: Math.random() * Math.PI * 2,
+                life: 1
+            });
+        }
+
+        function drawBloodPools() {
+            bloodPools.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.fillStyle = 'rgba(90, 0, 0, 0.35)';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // ---- New: ambient floating dust/embers ----
+        function initDustMotes() {
+            dustMotes = [];
+            for (let i = 0; i < 40; i++) {
+                dustMotes.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: 1 + Math.random() * 2,
+                    speed: 0.1 + Math.random() * 0.3,
+                    drift: (Math.random() - 0.5) * 0.3,
+                    alpha: 0.1 + Math.random() * 0.25
+                });
+            }
+        }
+
+        function updateDustMotes() {
+            dustMotes.forEach(m => {
+                m.y -= m.speed;
+                m.x += m.drift;
+                if (m.y < -10) {
+                    m.y = canvas.height + 10;
+                    m.x = Math.random() * canvas.width;
+                }
+                if (m.x < -10) m.x = canvas.width + 10;
+                if (m.x > canvas.width + 10) m.x = -10;
+            });
+        }
+
+        function drawDustMotes() {
+            dustMotes.forEach(m => {
+                ctx.fillStyle = `rgba(255, 100, 80, ${m.alpha})`;
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // ---- New: combo / killstreak system ----
+        function registerKill(isBoss) {
+            combo++;
+            comboTimer = COMBO_TIMEOUT;
+            if (combo >= 2) {
+                comboDisplay.textContent = `COMBO x${combo}`;
+                comboDisplay.classList.add('show');
+            }
+        }
+
+        function updateCombo(deltaTime) {
+            if (comboTimer > 0) {
+                comboTimer -= deltaTime;
+                if (comboTimer <= 0) {
+                    combo = 0;
+                    comboDisplay.classList.remove('show');
+                }
+            }
+        }
+
+        // ---- New: wave banner ----
+        function showWaveBanner(text) {
+            waveBanner.textContent = text;
+            waveBanner.classList.add('show');
+            setTimeout(() => waveBanner.classList.remove('show'), 1800);
+        }
+
+        function updateParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                // Update position based on type
+                switch (p.type) {
+                    case PARTICLE_TYPES.BLOOD:
+                    case PARTICLE_TYPES.EXPLOSION:
+                        p.x += Math.cos(p.angle) * p.speed;
+                        p.y += Math.sin(p.angle) * p.speed;
+                        p.speed *= 0.95; // Slow down over time
+                        p.y += 0.2; // Gravity effect
+                        break;
+                    case PARTICLE_TYPES.SMOKE:
+                        p.x += Math.cos(p.angle) * p.speed * 0.5;
+                        p.y += Math.sin(p.angle) * p.speed * 0.5 - 0.3; // Float upward
+                        p.speed *= 0.97;
+                        p.size += 0.1; // Expand as it rises
+                        break;
+                }
+
+                p.life--;
+                p.rotation += p.rotationSpeed;
+
+                // Remove dead particles
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                const alpha = p.life / p.maxLife;
+                
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                
+                switch (p.type) {
+                    case PARTICLE_TYPES.BLOOD:
+                        ctx.fillStyle = `rgba(150, 0, 0, ${alpha * 0.8})`;
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, p.size, p.size * 0.7, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    case PARTICLE_TYPES.MUZZLE_FLASH:
+                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+                        gradient.addColorStop(0, `rgba(255, 255, 0, ${alpha})`);
+                        gradient.addColorStop(0.5, `rgba(255, 165, 0, ${alpha * 0.7})`);
+                        gradient.addColorStop(1, `rgba(255, 0, 0, 0)`);
+                        
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(-p.size, -p.size/2, p.size*2, p.size);
+                        break;
+                        
+                        case PARTICLE_TYPES.EXPLOSION:
+                        const explosionGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+                        explosionGradient.addColorStop(0, `rgba(255, ${100 + Math.floor(155 * alpha)}, 0, ${alpha})`);
+                        explosionGradient.addColorStop(1, `rgba(255, 0, 0, 0)`);
+                        
+                        ctx.fillStyle = explosionGradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    case PARTICLE_TYPES.SMOKE:
+                        ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.3})`;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    case PARTICLE_TYPES.SPARK:
+                        ctx.strokeStyle = `rgba(255, 255, 0, ${alpha})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(Math.cos(p.angle) * p.size, Math.sin(p.angle) * p.size);
+                        ctx.stroke();
+                        break;
+                }
+                
+                ctx.restore();
+            });
+        }
+
+        function spawnZombie() {
+            if (zombies.length >= MAX_ZOMBIES) return;
+            
+            // Determine spawn position outside viewport
+            let x, y;
+            const buffer = 100; // Spawn outside visible area
+            
+            if (Math.random() < 0.5) {
+                // Spawn on left or right side
+                x = Math.random() < 0.5 ? -buffer : canvas.width + buffer;
+                y = Math.random() * canvas.height;
+            } else {
+                // Spawn on top or bottom
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? -buffer : canvas.height + buffer;
+            }
+            
+            const size = 30 + Math.random() * 10;
+            const speed = ZOMBIE_SPEED * (0.8 + Math.random() * 0.4); // Some variation
+            
+            zombies.push({
+                x: x,
+                y: y,
+                width: size,
+                height: size,
+                health: 100,
+                maxHealth: 100,
+                speed: speed,
+                damage: 10,
+                attackCooldown: 0,
+                color: `hsl(${Math.random() * 30 + 80}, 70%, 40%)`, // Greenish hues
+                isBoss: false,
+                lastDamageTime: 0,
+                flashTimer: 0
+            });
+            
+            // Schedule next spawn
+            spawnTimer = setTimeout(spawnZombie, spawnInterval);
+        }
+
+        function spawnBoss() {
+            if (boss) return; // Only one boss at a time
+            
+            // Determine spawn position outside viewport
+            let x, y;
+            const buffer = 100;
+            
+            if (Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? -buffer : canvas.width + buffer;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? -buffer : canvas.height + buffer;
+            }
+            
+            boss = {
+                x: x,
+                y: y,
+                width: 60,
+                height: 60,
+                health: BOSS_HEALTH,
+                maxHealth: BOSS_HEALTH,
+                speed: BOSS_SPEED,
+                damage: 25,
+                attackCooldown: 0,
+                color: '#8B0000', // Dark red
+                isBoss: true,
+                lastDamageTime: 0,
+                flashTimer: 0,
+                chargeCooldown: 0,
+                isCharging: false,
+                chargeDirection: { x: 0, y: 0 },
+                chargeSpeed: 8
+            };
+            
+            // Show boss health bar
+            bossHealthContainer.style.display = 'block';
+            updateBossHealthBar();
+            
+            // Boss roar effect
+            createScreenShake(10, 1000);
+            createParticles(boss.x, boss.y, PARTICLE_TYPES.EXPLOSION, 30, '#FF0000');
+            showWaveBanner('BOSS INCOMING');
+        }
+
+        function spawnCrate() {
+            // Don't spawn if there's already a crate
+            if (crates.length > 0) return;
+            
+            // Random position within canvas (with some margin)
+            const margin = 100;
+            const x = margin + Math.random() * (canvas.width - 2 * margin);
+            const y = margin + Math.random() * (canvas.height - 2 * margin);
+            
+            const weaponTypes = ['shotgun', 'smg', 'rifle'];
+            const weaponType = weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
+            
+            crates.push({
+                x: x,
+                y: y,
+                width: 30,
+                height: 30,
+                type: 'weapon',
+                weaponType: weaponType,
+                spawnTime: Date.now(),
+                duration: CRATE_DURATION
+            });
+            
+            // Schedule next crate spawn
+            crateSpawnTimer = setTimeout(spawnCrate, CRATE_SPAWN_INTERVAL);
+        }
+
+        function updateZombies() {
+            zombies.forEach((zombie, index) => {
+                // Move zombie toward player
+                const dx = player.x - zombie.x;
+                const dy = player.y - zombie.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0) {
+                    zombie.x += (dx / dist) * zombie.speed;
+                    zombie.y += (dy / dist) * zombie.speed;
+                }
+                
+                // Check collision with player
+                if (checkCollision(zombie, player)) {
+                    if (zombie.attackCooldown <= 0) {
+                        player.health -= zombie.damage;
+                        zombie.attackCooldown = 1000; // 1 second cooldown
+                        
+                        // Damage effect
+                        damageEffect.style.opacity = '0.7';
+                        setTimeout(() => {
+                            damageEffect.style.opacity = '0';
+                        }, 200);
+                        
+                        // Screen shake
+                        createScreenShake(3, 200);
+                        
+                        // Blood splatter
+                        createBloodSplatter();
+                        createFloatingText(player.x + player.width / 2, player.y, `-${zombie.damage}`, '#ff4444', 18);
+                    }
+                }
+                
+                // Reduce attack cooldown
+                if (zombie.attackCooldown > 0) {
+                    zombie.attackCooldown -= 16; // Assuming 60fps
+                }
+                
+                // Reduce damage flash timer
+                if (zombie.flashTimer > 0) {
+                    zombie.flashTimer -= 16;
+                }
+                
+                // Remove dead zombies
+                if (zombie.health <= 0) {
+                    // Create blood particles
+                    createParticles(zombie.x, zombie.y, PARTICLE_TYPES.BLOOD, 20, '#8B0000');
+                    createBloodPool(zombie.x + zombie.width / 2, zombie.y + zombie.height / 2);
+                    
+                    // Add to score (more for bosses)
+                    const points = zombie.isBoss ? 500 : 100;
+                    const comboBonus = combo >= 2 ? Math.floor(points * 0.1 * combo) : 0;
+                    score += points + comboBonus;
+                    stats.zombiesKilled++;
+                    registerKill(zombie.isBoss);
+                    createFloatingText(zombie.x + zombie.width / 2, zombie.y, `+${points + comboBonus}`, '#ffcc00', 16);
+                    
+                    zombies.splice(index, 1);
+                }
+            });
+            
+            // Update boss if it exists
+            if (boss) {
+                updateBoss();
+            }
+        }
+
+        function updateBoss() {
+            const dx = player.x - boss.x;
+            const dy = player.y - boss.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // Boss AI
+            if (boss.isCharging) {
+                // Continue charging in set direction
+                boss.x += boss.chargeDirection.x * boss.chargeSpeed;
+                boss.y += boss.chargeDirection.y * boss.chargeSpeed;
+                
+                // Stop charging after time or if hitting edge
+                boss.chargeCooldown -= 16;
+                if (boss.chargeCooldown <= 0 || 
+                    boss.x < -50 || boss.x > canvas.width + 50 || 
+                    boss.y < -50 || boss.y > canvas.height + 50) {
+                    boss.isCharging = false;
+                    boss.chargeCooldown = 2000; // Cooldown before next charge
+                }
+            } else {
+                // Normal movement toward player
+                if (dist > 0) {
+                    boss.x += (dx / dist) * boss.speed;
+                    boss.y += (dy / dist) * boss.speed;
+                }
+                
+                // Charge attack
+                boss.chargeCooldown -= 16;
+                if (boss.chargeCooldown <= 0 && dist < 300) {
+                    boss.isCharging = true;
+                    boss.chargeDirection = { 
+                        x: dx / dist, 
+                        y: dy / dist 
+                    };
+                    boss.chargeCooldown = 1500; // Charge duration
+                }
+            }
+            
+            // Check collision with player
+            if (checkCollision(boss, player)) {
+                if (boss.attackCooldown <= 0) {
+                    player.health -= boss.damage;
+                    boss.attackCooldown = 800; // Faster attacks for boss
+                    
+                    // Stronger damage effect
+                    damageEffect.style.opacity = '0.9';
+                    setTimeout(() => {
+                        damageEffect.style.opacity = '0';
+                    }, 300);
+                    
+                    // Screen shake
+                    createScreenShake(5, 300);
+                    
+                    // Blood splatter
+                    createBloodSplatter();
+                    createFloatingText(player.x + player.width / 2, player.y, `-${boss.damage}`, '#ff0000', 22);
+                }
+            }
+            
+            // Reduce attack cooldown
+            if (boss.attackCooldown > 0) {
+                boss.attackCooldown -= 16;
+            }
+            
+            // Reduce damage flash timer
+            if (boss.flashTimer > 0) {
+                boss.flashTimer -= 16;
+            }
+            
+            // Update boss health bar
+            updateBossHealthBar();
+            
+            // Check if boss is dead
+            if (boss.health <= 0) {
+                // Big explosion
+                createParticles(boss.x, boss.y, PARTICLE_TYPES.EXPLOSION, 50, '#FF0000');
+                createBloodPool(boss.x + boss.width / 2, boss.y + boss.height / 2, 30);
+                createScreenShake(15, 500);
+                
+                // Add to score
+                score += 500;
+                stats.zombiesKilled++;
+                registerKill(true);
+                createFloatingText(boss.x + boss.width / 2, boss.y, `+500`, '#ffcc00', 24);
+                showWaveBanner('BOSS DOWN!');
+                
+                // Hide health bar
+                bossHealthContainer.style.display = 'none';
+                
+                // Remove boss
+                boss = null;
+            }
+        }
+
+        function updateBossHealthBar() {
+            if (!boss) return;
+            
+            const healthPercent = (boss.health / boss.maxHealth) * 100;
+            bossHealthFill.style.width = `${healthPercent}%`;
+            
+            // Change color based on health
+            if (healthPercent > 60) {
+                bossHealthFill.style.background = 'linear-gradient(to right, #ff0000, #990000)';
+            } else if (healthPercent > 30) {
+                bossHealthFill.style.background = 'linear-gradient(to right, #ff6600, #cc3300)';
+            } else {
+                bossHealthFill.style.background = 'linear-gradient(to right, #ffcc00, #ff6600)';
+            }
+        }
+
+        function updateCrates() {
+            const now = Date.now();
+            
+            crates.forEach((crate, index) => {
+                // Check if crate has expired
+                if (now - crate.spawnTime > crate.duration) {
+                    crates.splice(index, 1);
+                    return;
+                }
+                
+                // Check collision with player
+                if (checkCollision(crate, player)) {
+                    // Pick up weapon
+                    player.currentWeapon = crate.weaponType;
+                    player.ammo = player.weapons[crate.weaponType].maxAmmo;
+                    player.maxAmmo = player.weapons[crate.weaponType].maxAmmo;
+                    
+                    // Update UI
+                    updateWeaponInfo();
+                    
+                    // Create pickup effect
+                    createParticles(crate.x + crate.width/2, crate.y + crate.height/2, 
+                                  PARTICLE_TYPES.EXPLOSION, 20, '#FFFFFF');
+                    createFloatingText(crate.x + crate.width/2, crate.y, player.weapons[crate.weaponType].name + ' ACQUIRED', '#55ffff', 14);
+                    
+                    // Remove crate
+                    crates.splice(index, 1);
+                }
+            });
+        }
+
+        function updateBullets() {
+            bullets.forEach((bullet, index) => {
+                // Move bullet
+                bullet.x += bullet.dx;
+                bullet.y += bullet.dy;
+                
+                // Check if bullet is out of bounds
+                if (bullet.x < 0 || bullet.x > canvas.width || 
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(index, 1);
+                    return;
+                }
+                
+                // Check collision with zombies
+                let hitSomething = false;
+                
+                // Check regular zombies first
+                for (let i = 0; i < zombies.length; i++) {
+                    const zombie = zombies[i];
+                    if (checkBulletCollision(bullet, zombie)) {
+                        zombie.health -= bullet.damage;
+                        zombie.flashTimer = 100; // Flash when hit
+                        zombie.lastDamageTime = Date.now();
+                        
+                        // Blood effect
+                        createParticles(bullet.x, bullet.y, PARTICLE_TYPES.BLOOD, 
+                                      bullet.damage / 5, '#8B0000');
+                        createFloatingText(bullet.x, bullet.y, `${bullet.damage}`, '#ffffff', 12);
+                        
+                        hitSomething = true;
+                        stats.shotsHit++;
+                        break;
+                    }
+                }
+                
+                // Check boss if not already hit something
+                if (!hitSomething && boss && checkBulletCollision(bullet, boss)) {
+                    boss.health -= bullet.damage;
+                    boss.flashTimer = 100;
+                    boss.lastDamageTime = Date.now();
+                    
+                    // Bigger blood effect for boss
+                    createParticles(bullet.x, bullet.y, PARTICLE_TYPES.BLOOD, 
+                                  bullet.damage / 3, '#8B0000');
+                    createFloatingText(bullet.x, bullet.y, `${bullet.damage}`, '#ffffff', 14);
+                    
+                    hitSomething = true;
+                    stats.shotsHit++;
+                    
+                    // Screen shake when boss is hit
+                    createScreenShake(2, 100);
+                }
+                
+                // Remove bullet if it hit something
+                if (hitSomething) {
+                    bullets.splice(index, 1);
+                }
+            });
+        }
+
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+
+        function checkBulletCollision(bullet, target) {
+            // Simple circle collision for bullets
+            const bulletRadius = 3;
+            const targetCenterX = target.x + target.width / 2;
+            const targetCenterY = target.y + target.height / 2;
+            const targetRadius = target.width / 2;
+            
+            const dx = bullet.x - targetCenterX;
+            const dy = bullet.y - targetCenterY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            return distance < bulletRadius + targetRadius;
+        }
+
+        function shootBullet() {
+            if (player.isReloading || player.ammo <= 0) return;
+            
+            const weapon = player.weapons[player.currentWeapon];
+            
+            // Calculate direction to mouse
+            const dx = mousePosition.x - (player.x + player.width / 2);
+            const dy = mousePosition.y - (player.y + player.height / 2);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // Normalize direction
+            const dirX = dx / dist;
+            const dirY = dy / dist;
+            
+            // Create bullet(s) based on weapon type
+            if (player.currentWeapon === 'shotgun') {
+                // Shotgun fires multiple pellets
+                for (let i = 0; i < weapon.pelletCount; i++) {
+                    // Add some spread
+                    const angle = Math.atan2(dirY, dirX) + 
+                                (Math.random() - 0.5) * weapon.spread * Math.PI / 180;
+                    
+                    const pelletDx = Math.cos(angle) * weapon.bulletSpeed;
+                    const pelletDy = Math.sin(angle) * weapon.bulletSpeed;
+                    
+                    bullets.push({
+                        x: player.x + player.width / 2,
+                        y: player.y + player.height / 2,
+                        dx: pelletDx,
+                        dy: pelletDy,
+                        damage: weapon.damage,
+                        color: weapon.color,
+                        glow: weapon.bulletGlow
+                    });
+                }
+            } else {
+                // Other weapons fire single bullet
+                bullets.push({
+                    x: player.x + player.width / 2,
+                    y: player.y + player.height / 2,
+                    dx: dirX * weapon.bulletSpeed,
+                    dy: dirY * weapon.bulletSpeed,
+                    damage: weapon.damage,
+                    color: weapon.color,
+                    glow: weapon.bulletGlow
+                });
+            }
+            
+            // Muzzle flash
+            createParticles(
+                player.x + player.width / 2 + dirX * 20, 
+                player.y + player.height / 2 + dirY * 20,
+                PARTICLE_TYPES.MUZZLE_FLASH, 
+                5, 
+                '#FFAA00'
+            );
+
+            // Shell casing spark
+            createParticles(
+                player.x + player.width / 2,
+                player.y + player.height / 2,
+                PARTICLE_TYPES.SPARK,
+                3,
+                '#FFD700'
+            );
+            
+            // Screen shake based on weapon
+            const shakeIntensity = player.currentWeapon === 'shotgun' ? 5 : 
+                                 player.currentWeapon === 'rifle' ? 3 : 1;
+            createScreenShake(shakeIntensity, 100);
+            
+            // Reduce ammo
+            player.ammo--;
+            stats.shotsFired++;
+            stats.totalAmmoFired++;
+            
+            // Update UI
+            updateAmmoDisplay();
+            
+            // Play shoot sound (would be implemented with Howler.js or similar)
+            // playSound('shoot');
+        }
+
+        function reloadWeapon() {
+            if (player.isReloading || player.ammo === player.maxAmmo) return;
+            
+            player.isReloading = true;
+            
+            // Show reload message briefly
+            reloadMessage.style.opacity = '1';
+            setTimeout(() => {
+                reloadMessage.style.opacity = '0';
+            }, 1000);
+            
+            // Reload after delay
+            player.reloadTimer = setTimeout(() => {
+                player.ammo = player.maxAmmo;
+                player.isReloading = false;
+                updateAmmoDisplay();
+                createFloatingText(player.x + player.width / 2, player.y - 20, 'RELOADED', '#55ff88', 14);
+            }, player.weapons[player.currentWeapon].reloadTime);
+        }
+
+        function showReloadMessage() {
+            reloadMessage.style.opacity = '1';
+            setTimeout(() => {
+                reloadMessage.style.opacity = '0';
+            }, 1500);
+        }
+
+        function createScreenShake(intensity, duration) {
+            screenShake.intensity = intensity;
+            screenShake.duration = duration;
+            screenShake.timer = duration;
+            
+            // Apply shake effect to game container
+            gameContainer.classList.add('shake');
+            setTimeout(() => {
+                gameContainer.classList.remove('shake');
+            }, duration);
+        }
+
+        function createBloodSplatter() {
+            // Show blood splatter effect
+            bloodSplatter.style.opacity = '0.7';
+            setTimeout(() => {
+                bloodSplatter.style.opacity = '0';
+            }, 300);
+        }
+
+        function updatePlayer() {
+            // Reset movement direction
+            player.moveDirection.x = 0;
+            player.moveDirection.y = 0;
+            player.isMoving = false;
+            
+            // Handle keyboard movement
+            if (keys.up) {
+                player.moveDirection.y = -1;
+                player.isMoving = true;
+                player.lastDirection.y = -1;
+            }
+            if (keys.down) {
+                player.moveDirection.y = 1;
+                player.isMoving = true;
+                player.lastDirection.y = 1;
+            }
+            if (keys.left) {
+                player.moveDirection.x = -1;
+                player.isMoving = true;
+                player.lastDirection.x = -1;
+            }
+            if (keys.right) {
+                player.moveDirection.x = 1;
+                player.isMoving = true;
+                player.lastDirection.x = 1;
+            }
+            
+            // Normalize diagonal movement
+            if (player.moveDirection.x !== 0 && player.moveDirection.y !== 0) {
+                player.moveDirection.x *= 0.7071; // 1/sqrt(2)
+                player.moveDirection.y *= 0.7071;
+            }
+            
+            // Update position
+            player.x += player.moveDirection.x * PLAYER_SPEED;
+            player.y += player.moveDirection.y * PLAYER_SPEED;
+            
+            // Keep player within bounds
+            player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+            player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
+            
+            // Update walking animation
+            if (player.isMoving) {
+                player.legPosition = (player.legPosition + 0.2) % (Math.PI * 2);
+
+                // Footstep dust every few frames
+                if (Math.random() < 0.15) {
+                    createParticles(player.x + player.width / 2, player.y + player.height, PARTICLE_TYPES.SMOKE, 1, '#888');
+                }
+            }
+
+            // Low health vignette pulse
+            if (player.health <= 30 && player.health > 0) {
+                vignette.style.opacity = '1';
+            } else {
+                vignette.style.opacity = '0';
+            }
+            
+            // Check if player is dead
+            if (player.health <= 0) {
+                gameOver();
+            }
+        }
+
+        function updateWeaponInfo() {
+            const weapon = player.weapons[player.currentWeapon];
+            weaponName.textContent = weapon.name;
+            weaponDamage.textContent = weapon.damage;
+            weaponRate.textContent = weapon.fireRate;
+            weaponAmmo.textContent = `${player.ammo}/${player.maxAmmo}`;
+        }
+
+        function updateAmmoDisplay() {
+            ammoElement.textContent = player.ammo;
+            maxAmmoElement.textContent = player.maxAmmo;
+            weaponAmmo.textContent = `${player.ammo}/${player.maxAmmo}`;
+
+            // Low ammo warning pulse on ammo panel text
+            if (player.ammo <= Math.ceil(player.maxAmmo * 0.2) && player.ammo > 0) {
+                ammoElement.style.color = '#ff5555';
+            } else {
+                ammoElement.style.color = '';
+            }
+        }
+
+        function updateStats() {
+            // Update accuracy
+            const accuracy = stats.shotsFired > 0 ? 
+                Math.round((stats.shotsHit / stats.shotsFired) * 100) : 0;
+            accuracyStat.textContent = `${accuracy}%`;
+            
+            // Update K/D ratio
+            const kdRatio = stats.deaths > 0 ? 
+                (stats.zombiesKilled / stats.deaths).toFixed(2) : stats.zombiesKilled.toFixed(2);
+            kdRatioElement.textContent = kdRatio;
+            
+            // Update ammo efficiency
+            const efficiency = stats.totalAmmoFired > 0 ? 
+                Math.round((stats.zombiesKilled / stats.totalAmmoFired) * 100) : 0;
+            ammoEfficiencyElement.textContent = `${efficiency}%`;
+            
+            // Update other stats
+            shotsFiredElement.textContent = stats.shotsFired;
+            zombiesKilledElement.textContent = stats.zombiesKilled;
+        }
+
+        function increaseDifficulty() {
+            // Increase zombie speed
+            ZOMBIE_SPEED *= 1.05;
+            BOSS_SPEED *= 1.03;
+            
+            // Decrease spawn interval (but not below minimum)
+            spawnInterval = Math.max(SPAWN_MINIMUM, spawnInterval * SPAWN_DECREASE_FACTOR);
+
+            wave++;
+            if (wave % 3 === 0) {
+                showWaveBanner(`WAVE ${wave}`);
+            }
+            
+            // Reschedule difficulty increase
+            difficultyTimer = setTimeout(increaseDifficulty, DIFFICULTY_INCREASE_INTERVAL);
+        }
+
+        function drawPlayer() {
+    ctx.save();
+    
+    // Apply screen shake offset
+    if (screenShake.timer > 0) {
+        const shakeOffsetX = (Math.random() - 0.5) * screenShake.intensity * 2;
+        const shakeOffsetY = (Math.random() - 0.5) * screenShake.intensity * 2;
+        ctx.translate(shakeOffsetX, shakeOffsetY);
+        
+        // Reduce shake timer
+        screenShake.timer -= 16;
+    }
+    
+    // Calculate angle to mouse for rotation
+    const centerX = player.x + player.width / 2;
+    const centerY = player.y + player.height / 2;
+    const angleToMouse = Math.atan2(
+        mousePosition.y - centerY,
+        mousePosition.x - centerX
+    );
+    
+    // Move to player center and rotate
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angleToMouse); // REMOVED the + Math.PI that was causing the flip
+
+    // Soft glow under player for depth
+    ctx.save();
+    ctx.rotate(-angleToMouse);
+    const playerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 35);
+    playerGlow.addColorStop(0, 'rgba(70,130,180,0.25)');
+    playerGlow.addColorStop(1, 'rgba(70,130,180,0)');
+    ctx.fillStyle = playerGlow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    
+    // Draw player body (torso)
+    ctx.fillStyle = '#4682B4'; // Steel blue
+    ctx.fillRect(-15, -10, 30, 20);
+    
+    // Draw player head
+    ctx.fillStyle = '#FFD700'; // Gold (for helmet)
+    ctx.beginPath();
+    ctx.arc(0, -20, 10, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw legs (with walking animation)
+    ctx.fillStyle = '#4682B4';
+    
+    // Left leg
+    const leftLegY = 10 + Math.sin(player.legPosition) * 5;
+    ctx.fillRect(-8, 10, 8, leftLegY);
+    
+    // Right leg
+    const rightLegY = 10 + Math.sin(player.legPosition + Math.PI) * 5;
+    ctx.fillRect(0, 10, 8, rightLegY);
+    
+    // Draw weapon
+    const weaponLength = 25;
+    const weaponOffset = 5;
+    
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(15 + weaponOffset, 0);
+    ctx.lineTo(15 + weaponOffset + weaponLength, 0);
+    ctx.stroke();
+    
+    ctx.restore();
+}
+
+        function drawZombies() {
+            zombies.forEach(zombie => {
+                // Flash white when hit
+                if (Date.now() - zombie.lastDamageTime < 100) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                } else {
+                    ctx.fillStyle = zombie.color;
+                }
+
+                // Subtle glow halo for visibility
+                ctx.save();
+                ctx.shadowColor = 'rgba(120,255,80,0.4)';
+                ctx.shadowBlur = 6;
+                
+                // Draw zombie body
+                ctx.beginPath();
+                ctx.ellipse(
+                    zombie.x + zombie.width / 2,
+                    zombie.y + zombie.height / 2,
+                    zombie.width / 2,
+                    zombie.height / 2,
+                    0, 0, Math.PI * 2
+                );
+                ctx.fill();
+                ctx.restore();
+                
+                // Draw zombie details (eyes, etc.)
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(
+                    zombie.x + zombie.width / 3,
+                    zombie.y + zombie.height / 3,
+                    3, 0, Math.PI * 2
+                );
+                ctx.arc(
+                    zombie.x + zombie.width * 2/3,
+                    zombie.y + zombie.height / 3,
+                    3, 0, Math.PI * 2
+                );
+                ctx.fill();
+                
+                // Draw health bar if damaged
+                if (zombie.health < zombie.maxHealth) {
+                    const healthPercent = (zombie.health / zombie.maxHealth) * 100;
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(
+                        zombie.x,
+                        zombie.y - 10,
+                        zombie.width,
+                        5
+                    );
+                    
+                    ctx.fillStyle = healthPercent > 50 ? '#4CAF50' : 
+                                   healthPercent > 25 ? '#FFC107' : '#F44336';
+                    ctx.fillRect(
+                        zombie.x,
+                        zombie.y - 10,
+                        zombie.width * (healthPercent / 100),
+                        5
+                    );
+                }
+            });
+            
+            // Draw boss if it exists
+            if (boss) {
+                drawBoss();
+            }
+        }
+
+        function drawBoss() {
+            // Flash white when hit
+            if (Date.now() - boss.lastDamageTime < 100) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            } else {
+                ctx.fillStyle = boss.color;
+            }
+
+            // Menacing pulsing glow
+            ctx.save();
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.006);
+            ctx.shadowColor = `rgba(255,0,0,${0.5 + pulse * 0.3})`;
+            ctx.shadowBlur = 20 + pulse * 10;
+            
+            // Draw boss body
+            ctx.beginPath();
+            ctx.ellipse(
+                boss.x + boss.width / 2,
+                boss.y + boss.height / 2,
+                boss.width / 2,
+                boss.height / 2,
+                0, 0, Math.PI * 2
+            );
+            ctx.fill();
+            ctx.restore();
+            
+            // Draw boss details (angry eyes)
+            ctx.fillStyle = '#FF0';
+            ctx.beginPath();
+            ctx.arc(
+                boss.x + boss.width / 3,
+                boss.y + boss.height / 3,
+                5, 0, Math.PI * 2
+            );
+            ctx.arc(
+                boss.x + boss.width * 2/3,
+                boss.y + boss.height / 3,
+                5, 0, Math.PI * 2
+            );
+            ctx.fill();
+            
+            // Draw angry eyebrows
+            ctx.strokeStyle = '#FF0';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(boss.x + boss.width / 3 - 5, boss.y + boss.height / 3 - 8);
+            ctx.lineTo(boss.x + boss.width / 3 + 5, boss.y + boss.height / 3 - 3);
+            ctx.moveTo(boss.x + boss.width * 2/3 - 5, boss.y + boss.height / 3 - 3);
+            ctx.lineTo(boss.x + boss.width * 2/3 + 5, boss.y + boss.height / 3 - 8);
+            ctx.stroke();
+            
+            // Draw health bar (already handled by UI element)
+        }
+
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                // Draw bullet trail
+                ctx.save();
+                ctx.strokeStyle = bullet.glow;
+                ctx.globalAlpha = 0.4;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(bullet.x, bullet.y);
+                ctx.lineTo(bullet.x - bullet.dx * 1.5, bullet.y - bullet.dy * 1.5);
+                ctx.stroke();
+                ctx.restore();
+
+                // Draw bullet glow
+                const gradient = ctx.createRadialGradient(
+                    bullet.x, bullet.y, 0,
+                    bullet.x, bullet.y, 8
+                );
+                gradient.addColorStop(0, bullet.glow);
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw bullet core
+                ctx.fillStyle = bullet.color;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawCrates() {
+            const now = Date.now();
+            
+            crates.forEach(crate => {
+                // Calculate remaining time percentage for pulse effect
+                const timeLeft = crate.duration - (now - crate.spawnTime);
+                const pulse = 0.5 + 0.5 * Math.sin(now * 0.005);
+                
+                // Draw crate
+                ctx.fillStyle = '#8B4513'; // Saddle brown
+                ctx.fillRect(crate.x, crate.y, crate.width, crate.height);
+                
+                // Draw crate details
+                ctx.strokeStyle = '#A0522D'; // Sienna
+                ctx.lineWidth = 2;
+                ctx.strokeRect(crate.x + 2, crate.y + 2, crate.width - 4, crate.height - 4);
+                
+                // Draw weapon icon based on type
+                ctx.fillStyle = '#FFD700'; // Gold
+                switch (crate.weaponType) {
+                    case 'shotgun':
+                        // Simple shotgun shape
+                        ctx.fillRect(crate.x + 10, crate.y + 15, 10, 3);
+                        ctx.beginPath();
+                        ctx.moveTo(crate.x + 20, crate.y + 15);
+                        ctx.lineTo(crate.x + 25, crate.y + 10);
+                        ctx.lineTo(crate.x + 25, crate.y + 20);
+                        ctx.closePath();
+                        ctx.fill();
+                        break;
+                    case 'smg':
+                        // SMG shape
+                        ctx.fillRect(crate.x + 10, crate.y + 12, 15, 6);
+                        break;
+                    case 'rifle':
+                        // Rifle shape
+                        ctx.fillRect(crate.x + 8, crate.y + 15, 14, 3);
+                        ctx.beginPath();
+                        ctx.moveTo(crate.x + 22, crate.y + 15);
+                        ctx.lineTo(crate.x + 25, crate.y + 12);
+                        ctx.lineTo(crate.x + 25, crate.y + 18);
+                        ctx.closePath();
+                        ctx.fill();
+                        break;
+                }
+                
+                // Draw glow effect
+                if (timeLeft < 5000) {
+                    // Pulse faster when about to disappear
+                    const fastPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
+                    ctx.shadowColor = `rgba(255, 255, 255, ${fastPulse * 0.7})`;
+                } else {
+                    ctx.shadowColor = `rgba(255, 255, 255, ${pulse * 0.5})`;
+                }
+                ctx.shadowBlur = 10;
+                ctx.strokeRect(crate.x, crate.y, crate.width, crate.height);
+                ctx.shadowBlur = 0;
+                
+                // Draw timer bar
+                const timePercent = timeLeft / crate.duration;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(crate.x, crate.y - 10, crate.width, 5);
+                
+                ctx.fillStyle = timePercent > 0.5 ? '#4CAF50' : 
+                               timePercent > 0.25 ? '#FFC107' : '#F44336';
+                ctx.fillRect(crate.x, crate.y - 10, crate.width * timePercent, 5);
+            });
+        }
+
+        function drawLightingEffects() {
+            // Flickering light effect
+            lighting.flicker = Math.random() * 5;
+            lighting.pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.001);
+            
+            // Draw radial gradient for lighting
+            const gradient = ctx.createRadialGradient(
+                player.x + player.width / 2,
+                player.y + player.height / 2,
+                50,
+                player.x + player.width / 2,
+                player.y + player.height / 2,
+                300 + lighting.flicker
+            );
+            
+            gradient.addColorStop(0, 'rgba(50, 0, 0, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(20, 0, 0, 0.4)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawGame() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid background
+            drawGridBackground();
+            drawDustMotes();
+            drawBloodPools();
+            
+            // Draw lighting effects
+            drawLightingEffects();
+            
+            // Draw all game objects
+            drawCrates();
+            drawZombies();
+            drawBullets();
+            drawPlayer();
+            drawParticles();
+            drawFloatingTexts();
+        }
+
+        function drawGridBackground() {
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(50, 50, 50, 0.3)';
+            ctx.lineWidth = 1;
+            
+            const gridSize = 40;
+            const offsetX = -player.x % gridSize;
+            const offsetY = -player.y % gridSize;
+            
+            // Vertical lines
+            for (let x = offsetX; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let y = offsetY; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function updateUI() {
+            // Update score
+            scoreElement.textContent = score;
+            
+            // Update health bar
+            const healthPercent = (player.health / 100) * 100;
+            healthFill.style.width = `${healthPercent}%`;
+            
+            // Change color based on health
+            if (healthPercent > 60) {
+                healthFill.style.background = 'linear-gradient(to right, #4CAF50, #2E7D32)';
+            } else if (healthPercent > 30) {
+                healthFill.style.background = 'linear-gradient(to right, #FFC107, #FF9800)';
+            } else {
+                healthFill.style.background = 'linear-gradient(to right, #F44336, #D32F2F)';
+            }
+            
+            // Update ammo display
+            updateAmmoDisplay();
+            
+            // Update weapon info
+            updateWeaponInfo();
+            
+            // Update performance stats
+            updateStats();
+        }
+
+        function gameLoop(timestamp) {
+            // Calculate delta time for smooth animation
+            const deltaTime = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+            
+            if (gameActive) {
+                // Update game state
+                updatePlayer();
+                updateZombies();
+                updateBullets();
+                updateCrates();
+                updateParticles();
+                updateFloatingTexts();
+                updateDustMotes();
+                updateCombo(deltaTime);
+                
+                // Draw everything
+                drawGame();
+                updateUI();
+            }
+            
+            // Continue the game loop
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            // Reset game state
+            gameActive = true;
+            score = 0;
+            combo = 0;
+            comboTimer = 0;
+            wave = 0;
+            comboDisplay.classList.remove('show');
+            vignette.style.opacity = '0';
+            player = {
+                ...player,
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                health: 100,
+                ammo: 10,
+                maxAmmo: 10,
+                isReloading: false,
+                currentWeapon: 'pistol'
+            };
+            
+            zombies = [];
+            boss = null;
+            bullets = [];
+            crates = [];
+            particles = [];
+            floatingTexts = [];
+            bloodPools = [];
+            initDustMotes();
+            
+            // Reset stats
+            stats = {
+                shotsFired: 0,
+                shotsHit: 0,
+                zombiesKilled: 0,
+                deaths: 0,
+                ammoUsed: 0,
+                totalAmmoFired: 0
+            };
+            
+            // Reset difficulty
+            ZOMBIE_SPEED = 2.5;
+            BOSS_SPEED = 2.0;
+            spawnInterval = SPAWN_INTERVAL_MAX;
+            
+            // Clear any existing timers
+            clearTimeout(spawnTimer);
+            clearTimeout(difficultyTimer);
+            clearTimeout(bossSpawnTimer);
+            clearTimeout(crateSpawnTimer);
+            clearTimeout(player.reloadTimer);
+            
+            // Start game systems
+            spawnTimer = setTimeout(spawnZombie, spawnInterval);
+            difficultyTimer = setTimeout(increaseDifficulty, DIFFICULTY_INCREASE_INTERVAL);
+            bossSpawnTimer = setTimeout(spawnBoss, BOSS_SPAWN_INTERVAL);
+            crateSpawnTimer = setTimeout(spawnCrate, CRATE_SPAWN_INTERVAL);
+            
+            // Hide start screen
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            
+            // Hide boss health bar
+            bossHealthContainer.style.display = 'none';
+
+            showWaveBanner('SURVIVE');
+            
+            // Start game loop
+            lastFrameTime = performance.now();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            
+            // Clear timers
+            clearTimeout(spawnTimer);
+            clearTimeout(difficultyTimer);
+            clearTimeout(bossSpawnTimer);
+            clearTimeout(crateSpawnTimer);
+            clearTimeout(player.reloadTimer);
+            
+            // Cancel animation frame
+            cancelAnimationFrame(animationFrameId);
+            
+            // Update death count
+            stats.deaths++;
+
+            vignette.style.opacity = '0';
+            
+            // Show game over screen
+            finalScoreElement.textContent = score;
+            finalAccuracyElement.textContent = accuracyStat.textContent;
+            finalKdElement.textContent = kdRatioElement.textContent;
+            finalEfficiencyElement.textContent = ammoEfficiencyElement.textContent;
+            
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function restartGame() {
+            gameOverScreen.style.display = 'none';
+            startGame();
+        }
+
+        // Initialize weapon info display
+        updateWeaponInfo();
+        initDustMotes();
+
+        // Show start screen
+        startScreen.style.display = 'flex';
+    </script>
+</body>
+</html>
